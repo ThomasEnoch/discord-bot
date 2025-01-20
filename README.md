@@ -5,26 +5,28 @@ A Discord bot that responds to customer support queries using LLM-based FAQ retr
 ## Features
 
 ### Implemented
+- **Slash Commands**: Modern Discord slash command system with TypeScript type safety
+- **Admin Commands**: 
+  - `/admintest` - Verify admin privileges
+  - `/debug memory` - View ephemeral memory contents
 - **Channel Validation**: Bot only responds in channels with configured prefix (e.g., `support-*`)
-- **Role-Based Access Control**: Admin commands restricted to users with specific roles
+- **Permission System**: Admin commands restricted using Discord's built-in permission system
+- **Ephemeral Memory**: Short-term conversation context with configurable size and duration
 - **Structured Logging**: Comprehensive logging system with contextual information
-- **Command System**: Extensible command handler with permission checks
 
 ### Planned
 - LLM-based FAQ retrieval
 - JIRA ticket creation
-- Ephemeral conversation memory
 - Admin configuration commands
+- Support channel auto-responses
 
 ## Project Structure
 
 ```
 bot/
 ├── src/
-│   ├── commands/       # Bot commands (admin + user)
-│   ├── config/         # Configuration files and loaders
-│   ├── integrations/   # JIRA or other API integrations
-│   ├── services/       # Core services (message handling, validation)
+│   ├── commands/       # Slash commands and command registration
+│   ├── services/       # Core services (validation, memory management)
 │   ├── utils/          # Reusable helper functions
 │   ├── types/          # TypeScript interfaces and types
 │   └── index.ts        # Main entry point
@@ -38,79 +40,77 @@ bot/
    npm install
    ```
 3. Copy `.env.example` to `.env` and configure:
-   - `DISCORD_TOKEN`: Your bot's token
-   - `DISCORD_CLIENT_ID`: Your bot's client ID
+   - `DISCORD_TOKEN`: Your bot's token (from Discord Developer Portal > Bot)
+   - `DISCORD_CLIENT_ID`: Your application ID (from Discord Developer Portal > General Information)
    - `SUPPORT_CHANNEL_PREFIX`: Prefix for support channels (default: 'support-')
-   - `ADMIN_ROLE_IDS`: Comma-separated Discord role IDs for admin access
+   - `MAX_CONTEXT_SIZE`: Number of messages to keep in memory (default: 10)
+   - `CONTEXT_MAX_AGE_MINUTES`: How long to keep context (default: 30)
    
 4. Build the project:
    ```bash
    npm run build
    ```
-5. Start the bot:
+
+5. Deploy slash commands:
    ```bash
-   npm start
+   npm run deploy-commands
    ```
 
-## Usage
+6. Start the bot:
+   ```bash
+   # For development (with hot reload):
+   npm run dev
 
-### Channel Management
-- Bot only responds to messages in channels starting with the configured prefix
-- Other channels are ignored for regular messages
-- Commands work in any channel
-
-### Admin Commands
-- Admin commands are restricted to users with configured admin roles
-- To get a role ID:
-  1. Enable Developer Mode in Discord (User Settings > Advanced)
-  2. Right-click the role in Server Settings > Roles
-  3. Click "Copy Role ID"
-
-Current admin commands:
-- `!admintest` - Test command to verify admin privileges
-
-### Regular Commands
-- Commands start with `!` prefix
-- Work in any channel, regardless of channel prefix
+   # For production:
+   npm run build && npm start
+   ```
 
 ## Development
 
-- `npm run dev` - Run the bot in development mode with hot-reload
+### Available Scripts
+- `npm run build` - Build the TypeScript code
+- `npm run dev` - Run with ts-node and path aliases for development
+- `npm run deploy-commands` - Deploy slash commands to Discord
 - `npm run lint` - Run ESLint
 - `npm test` - Run tests
 
-## Logging
+### Path Aliases
+The project uses TypeScript path aliases for cleaner imports. The `@/*` alias points to the `src/` directory. For example:
+```typescript
+import { logger } from '@/utils/logger';
+```
 
-The bot implements comprehensive logging with the following levels:
-- `debug`: Detailed troubleshooting information
-- `info`: General operational events
-- `warn`: Concerning but non-critical issues
-- `error`: Failures and errors
+### Adding New Commands
+1. Create a new command file in `src/commands/`
+2. Implement the `SlashCommand` interface
+3. Register the command in `src/commands/slash-commands.ts`
+4. Run `npm run deploy-commands` to update Discord
 
-Logs include contextual information such as:
-- Channel names and IDs
-- User IDs
-- Message content (for debugging)
-- Command execution status
-
-## Configuration
-
-Environment variables (see `.env.example` for details):
-- `DISCORD_TOKEN`: Bot authentication token
-- `DISCORD_CLIENT_ID`: Bot's client ID
-- `SUPPORT_CHANNEL_PREFIX`: Channel prefix for support channels
-- `ADMIN_ROLE_IDS`: Admin role IDs (comma-separated)
-
-## Contributing
-
-1. Follow TypeScript best practices
-2. Implement comprehensive logging for new features
-3. Add proper error handling
-4. Test thoroughly before submitting changes
+### Environment Variables
+See `.env.example` for all available configuration options and their descriptions.
 
 ## Security
+- Bot token and other credentials are stored in environment variables
+- Admin commands use Discord's permission system
+- Channel validation prevents unauthorized usage
+- Ephemeral memory automatically cleans up old data
 
-- Admin commands are role-restricted
-- Logging excludes sensitive information
-- Channel validation prevents unwanted responses
-- Bot messages are properly filtered to prevent loops
+## Logging
+The bot uses structured logging with the following levels:
+- `ERROR`: For errors that need immediate attention
+- `WARN`: For potentially problematic situations
+- `INFO`: For important state changes
+- `DEBUG`: For detailed debugging information
+
+## Contributing
+1. Create a feature branch (`git checkout -b feature/amazing-feature`)
+2. Commit your changes using semantic commit messages:
+   - `feat:` for new features
+   - `fix:` for bug fixes
+   - `refactor:` for code changes
+   - `docs:` for documentation
+   - `style:` for formatting
+   - `test:` for adding tests
+   - `chore:` for maintenance
+3. Push to the branch
+4. Open a Pull Request
