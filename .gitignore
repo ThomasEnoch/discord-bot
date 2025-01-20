@@ -21,9 +21,9 @@ build/
 .DS_Store
 
 # Project specific
-# prd.md
-# func-req.md
-# .windsurfrules
+prd.md
+func-req.md
+.windsurfrules
 
 # Logs
 logs/
