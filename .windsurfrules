@@ -1,0 +1,95 @@
+### Brief Description
+- A Discord bot that responds to customer support queries using LLM-based FAQ retrieval
+- Written in TypeScript on Node.js, integrating ephemeral memory and JIRA ticket creation for escalations
+- Provides admin-only commands for advanced operations (e.g., creating JIRA tickets)
+- Aims to handle frequent customer questions automatically, reducing support overhead
+
+## Code Style and Structure
+- Write concise, technical TypeScript code with clear examples
+- Use functional and declarative programming patterns; avoid large classes
+- Prefer iteration and modular utility functions over code duplication
+- Use descriptive variable names (e.g., `isConnected`, `hasIssue`)
+
+### Repository Structure
+```
+bot/
+├── src/
+│   ├── commands/       # Bot commands (admin + user)
+│   ├── integrations/   # JIRA or other API integrations
+│   ├── services/       # Core services (message handling, ephemeral memory)
+│   ├── utils/          # Reusable helper functions
+│   ├── types/          # TypeScript interfaces and types
+│   └── index.ts        # Main entry point
+shared/
+├── src/
+│   ├── types/          # Shared types if you have multiple packages
+│   └── utils/          # Shared helper functions
+```
+
+*Adapt folder naming or structure as needed, but keep a clear separation of concerns.*
+
+## Tech Stack
+- Node.js (Express.js optional if you need a web server or API endpoint)
+- TypeScript
+- Discord.js or a similar library for Discord bot interaction
+- JIRA API integration
+- LLM or AI library (e.g., OpenAI SDK)
+- (Optional) Docker for containerization
+
+## Naming Conventions
+- Use lowercase with dashes for directories (e.g., `commands/create-ticket`)
+- Favor named exports for functions and utilities
+- Use PascalCase for significant modules or classes (if absolutely necessary)
+- Use camelCase for utility files (e.g., `faqLookup.ts`)
+- Keep function and variable names descriptive (e.g., `createJiraTicket`, `fetchFaqAnswers`)
+
+## TypeScript Usage
+- Use TypeScript for all code; prefer interfaces over types for objects
+- Avoid `enum`; use const objects with `as const` for enumerations
+- For the Discord bot "commands," define a strict command interface (e.g., `interface BotCommand { name: string; execute(...): Promise<void>; }`)
+- Use functional patterns over class-based OOP if possible
+- Use absolute imports where appropriate (`@/utils/faqParser`)
+- Avoid try/catch unless you need to handle or translate errors meaningfully
+- Use explicit return types for all functions
+
+## Discord Bot Specific
+- **Message Handling**: Implement a central handler that receives all messages, checks for a prefix (e.g., `!command`), and routes to the correct logic
+- **Ephemeral Memory**: Maintain short-term conversation context in memory for each channel or user session. Clear it regularly or on bot restart
+- **Admin Commands**: Restrict commands like `!createTicket` to admin users by role ID or permission check
+- **Rate Limiting**: Ensure the bot handles large volumes gracefully; avoid spamming the Discord channel
+- **Logging**: Use a structured logger (e.g., pino or winston) to record significant events
+
+## State Management
+- Minimal state is best. Use ephemeral memory for conversation context, stored in a local in-memory cache
+- For persistent config (e.g., "bot personality" settings), use a small JSON file or key-value store
+- Implement cleanup for stale sessions or context
+
+## Syntax and Formatting
+- Use the `function` keyword for pure/utility functions (e.g., `function parseMessage() {}`)
+- Avoid unnecessary curly braces in conditionals and loops (`if (...) return`)
+- Use a declarative style for descriptive logic flows
+- Prefer discriminated unions for branching logic (e.g., different message or command types)
+- Follow a consistent linter/prettier configuration for formatting
+
+## UI and Styling (If Any)
+- If you create a small web or console UI for bot settings, keep it minimal and consistent
+- Document any front-end interactions or tools used for demonstration
+- If a web front-end is used, rely on Tailwind CSS or a similar library (optional for Discord-only apps)
+- (Omit this section if there's no web or graphical component to the project)
+
+## Error Handling
+- Implement structured error handling with helpful logs
+- When the bot fails to answer or an API call fails, provide a user-friendly fallback message (e.g., "Sorry, I couldn't process that. Please try again.")
+- For JIRA API failures, provide admin-specific error info and ensure logs capture the problem details
+
+## Testing
+- Write unit tests (Jest or similar) for utilities and integration modules (e.g., JIRA API calls)
+- Consider integration tests that simulate Discord messages (mocks or stubs for discord.js)
+- Validate ephemeral memory logic under load or multiple concurrent sessions
+- Test error paths (e.g., JIRA offline, incorrect commands)
+
+## Security
+- Keep all JIRA credentials or tokens in a secure location (e.g., environment variables)
+- Restrict admin commands by Discord role or permission checks
+- Log only necessary info—avoid printing credentials in logs
+- Consider rate limiting for commands to avoid spam or abusive usage

@@ -1,9 +1,11 @@
 import { Client, Events, GatewayIntentBits, TextChannel } from 'discord.js';
 import dotenv from 'dotenv';
-import { SupportChannelValidator } from './services/channelValidator';
-import { CommandHandler } from './services/commandHandler';
-import { commands } from './commands';
-import { logger } from './utils/logger';
+import { SupportChannelValidator } from '@/services/channelValidator';
+import { EphemeralMemory } from '@/services/ephemeralMemory';
+import { PersonalityService } from '@/services/personalityService';
+import { slashCommands } from '@/commands/slash-commands';
+import { validatePermissions, handleValidationFailure } from '@/services/commandValidator';
+import { logger } from '@/utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -19,14 +21,15 @@ const client = new Client({
     ],
 });
 
-// Initialize channel validator and command handler
+// Initialize services
 const channelValidator = new SupportChannelValidator(
     process.env.SUPPORT_CHANNEL_PREFIX || 'support-'
 );
-const commandHandler = new CommandHandler();
-
-// Register all commands
-commands.forEach(command => commandHandler.registerCommand(command));
+const ephemeralMemory = new EphemeralMemory(
+    parseInt(process.env.MAX_CONTEXT_SIZE || '10'),
+    parseInt(process.env.CONTEXT_MAX_AGE_MINUTES || '30')
+);
+const personalityService = new PersonalityService();
 
 // Add more detailed ready event logging
 client.once(Events.ClientReady, (readyClient) => {
@@ -36,7 +39,43 @@ client.once(Events.ClientReady, (readyClient) => {
     }, 'Bot is ready and listening for messages');
 });
 
-// Handle message creation
+// Handle slash commands
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const command = slashCommands.get(interaction.commandName);
+    if (!command) {
+        logger.warn({ commandName: interaction.commandName }, 'Unknown command');
+        return;
+    }
+
+    try {
+        // Validate permissions
+        const validationResult = validatePermissions(interaction, command.metadata);
+        if (!validationResult.isValid) {
+            await handleValidationFailure(interaction, validationResult.reason!);
+            return;
+        }
+
+        // Pass services to commands that need them
+        await command.execute(interaction, { ephemeralMemory });
+        logger.debug({ 
+            commandName: interaction.commandName,
+            userId: interaction.user.id
+        }, 'Command executed successfully');
+    } catch (error) {
+        logger.error({ error, commandName: interaction.commandName }, 'Error executing command');
+        const errorMessage = 'There was an error executing this command.';
+        
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: errorMessage, ephemeral: true });
+        } else {
+            await interaction.reply({ content: errorMessage, ephemeral: true });
+        }
+    }
+});
+
+// Handle message creation for support channels
 client.on(Events.MessageCreate, async (message) => {
     // Ignore bot messages first
     if (message.author.bot) {
@@ -56,12 +95,6 @@ client.on(Events.MessageCreate, async (message) => {
         authorId: message.author.id
     }, 'Received message');
 
-    // Handle commands first (these work in any channel)
-    if (message.content.startsWith('!')) {
-        await commandHandler.handleCommand(message, '!');
-        return;
-    }
-
     // Validate the channel
     const validationResult = channelValidator.isValidChannel(message.channel);
     
@@ -76,7 +109,20 @@ client.on(Events.MessageCreate, async (message) => {
     logger.debug({ channelName: message.channel.name }, 'Processing message in support channel');
     
     try {
-        await message.reply('I received your message in a support channel!');
+        // Add message to ephemeral memory
+        ephemeralMemory.addMessage(message);
+        
+        // Get conversation context
+        const context = ephemeralMemory.getContext(message.channelId);
+        
+        // If this is the first message in the context, send a greeting
+        if (context.length === 1) {
+            await message.reply(personalityService.getRandomGreeting());
+        } else {
+            // TODO: Implement FAQ-based response logic here
+            await message.reply(personalityService.getDefaultResponse());
+        }
+        
         logger.debug({ messageId: message.id }, 'Successfully replied to message');
     } catch (error) {
         logger.error({ error, messageId: message.id }, 'Failed to reply to message');
